@@ -16,9 +16,9 @@ class AutoLogTransform(BaseEstimator,TransformerMixin):
             self.beta = skew(X,axis=0)*self.beta_multiplier
         self.beta = np.where(self.beta == 0, 1e-5, self.beta)
         
-        self.xmin = np.min(X,axis=0)
-        self.xmax = np.max(X,axis=0)
-        self.R = self.xmax - self.xmin
+        self.xmin_ = np.min(X,axis=0)
+        self.xmax_ = np.max(X,axis=0)
+        self.R_ = self.xmax_ - self.xmin_
         return self
     
     def transform(self,X:np.ndarray):
@@ -28,7 +28,7 @@ class AutoLogTransform(BaseEstimator,TransformerMixin):
         X = np.asarray(X, dtype=float)
         for i in range(X.shape[1]):
             if self.beta[i] > 0:
-                X[:,i] = np.log(X[:,i] - self.xmin[i] + self.R[i]/self.beta[i])
+                X[:,i] = np.log(X[:,i] - self.xmin_[i] + self.R_[i]/self.beta[i])
             elif self.beta[i] < 0:
-                X[:,i] = -np.log(self.xmax[i] - X[:,i] - self.R[i]/self.beta[i])
+                X[:,i] = -np.log(self.xmax_[i] - X[:,i] - self.R_[i]/self.beta[i])
         return X
