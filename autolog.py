@@ -1,19 +1,27 @@
 import numpy as np
-from sklearn.base import BaseEstimator, TransformerMixin, ClassifierMixin
+from sklearn.base import BaseEstimator, TransformerMixin
 from scipy.stats import skew
 
-class AutoLogTransform(BaseEstimator,TransformerMixin):
+class ASLT(BaseEstimator,TransformerMixin):
     '''
-    Automatic log transform based on Feng et al (2016)
+    Automatic Shifted Log Transform (ASLT) based on Feng et al (2016)
     '''
-    def __init__(self,beta=None,beta_multiplier=10):
+    def __init__(self,beta:float|list|np.ndarray=None):
+        '''
+        Initializes automatic log transformer
+
+        Args:
+            beta (float | list | np.ndarray): If float is used, calculate beta for each column using its skewness and multiply it by the beta argument. If list is used, beta values for each column will be taken from it (dimension of list must match the number of columns of X).  
+        '''
         self.beta = beta
-        self.beta_multiplier = beta_multiplier
     
     def fit(self,X:np.ndarray,y=None):
         X = np.asarray(X, dtype=float)
-        if self.beta is None:
-            self.beta = skew(X,axis=0)*self.beta_multiplier
+        if isinstance(self.beta,(list,np.ndarray,tuple,set)):
+            if len(self.beta) != X.shape[1]:
+                raise IndexError('Dimension of beta and X columns does not match!')
+        else:
+            self.beta = skew(X,axis=0)*self.beta
         self.beta = np.where(self.beta == 0, 1e-5, self.beta)
         
         self.xmin_ = np.min(X,axis=0)
@@ -26,9 +34,10 @@ class AutoLogTransform(BaseEstimator,TransformerMixin):
 
     def __autolog(self,X:np.ndarray):
         X = np.asarray(X, dtype=float)
-        for i in range(X.shape[1]):
+        X_copy = X.copy()
+        for i in range(X_copy.shape[1]):
             if self.beta[i] > 0:
-                X[:,i] = np.log(X[:,i] - self.xmin_[i] + self.R_[i]/self.beta[i])
+                X_copy[:,i] = np.log(X_copy[:,i] - self.xmin_[i] + self.R_[i]/self.beta[i])
             elif self.beta[i] < 0:
-                X[:,i] = -np.log(self.xmax_[i] - X[:,i] - self.R_[i]/self.beta[i])
-        return X
+                X_copy[:,i] = -np.log(self.xmax_[i] - X_copy[:,i] - self.R_[i]/self.beta[i])
+        return X_copy
